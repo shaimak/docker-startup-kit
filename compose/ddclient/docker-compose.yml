@@ -1,0 +1,22 @@
+# ~/apps/compose/ddclient/docker-compose.yml
+# Defines the ddclient service using linuxserver image.
+# Reads UID/GID/TZ from the .env file.
+# Mounts the configuration file from the host data directory.
+
+# version: "3.8" # Optional in Docker Compose v2+, can be removed
+
+services:
+  ddclient:
+    image: lscr.io/linuxserver/ddclient:latest # Using the linuxserver.io ddclient image
+    container_name: ddclient_updater # A specific name for the container
+    environment:
+      # Set User ID for file permissions inside container (read from .env file)
+      - PUID=${DDCLIENT_UID:-1000}
+      # Set Group ID for file permissions inside container (read from .env file)
+      - PGID=${DDCLIENT_GID:-1000}
+      # Set Timezone for logs inside container (read from .env file)
+      - TZ=${TZ:-Etc/UTC}
+    volumes:
+      # Mount the ddclient configuration file into the container's config directory
+      - ../../data/ddclient/ddclient.conf:/config/ddclient.conf
+    restart: unless-stopped # Ensures the container restarts if it stops unexpectedly or on boot

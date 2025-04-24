@@ -1,0 +1,5 @@
+# Ignore all persistent data volumes
+data/
+
+# Ignore all actual environment variable files
+.env_files/

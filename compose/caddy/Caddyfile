@@ -1,0 +1,43 @@
+# ~/apps/compose/caddy/Caddyfile
+# Configuration for the Caddy reverse proxy server
+
+# Global options block (optional but recommended)
+{
+    # Email address for ACME account (Let's Encrypt notifications)
+    email shaimak.reddy@gmail.com # <--- REPLACE THIS
+}
+
+# --- Paperless-NGX Site Definition ---
+# This block defines how to handle requests for docs.shaimakreddy.com
+docs.shaimakreddy.com {
+    # Enable modern compression algorithms
+    encode zstd gzip
+
+    # Reverse proxy requests to the Paperless webserver container
+    # Caddy will automatically handle HTTPS for docs.shaimakreddy.com
+    # 'paperless-webserver' is the container_name of the target service
+    # Assumes paperless-webserver is also connected to the 'proxy_network'
+    reverse_proxy paperless-webserver:8000
+}
+
+
+# --- Keycloak Site Definition --- given up
+
+# --- Authentik Site Definition ---
+sso.shaimakreddy.com {
+    encode zstd gzip
+    # Reverse proxy requests to the Authentik server container on its HTTP port (9000)
+    # Caddy handles the HTTPS termination.
+    # Assumes authentik-server is connected to the 'proxy_network'
+    reverse_proxy authentik-server:9000
+}
+
+# --- Outline Site Definition ---
+wiki.shaimakreddy.com {
+    encode zstd gzip
+    # Proxy requests to the Outline container on its internal port 3000
+    reverse_proxy outline-app:3000
+}
+
+# Add other domains below here later
+

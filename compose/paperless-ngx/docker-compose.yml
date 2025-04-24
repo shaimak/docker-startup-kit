@@ -1,0 +1,78 @@
+# ~/apps/compose/paperless-ngx/docker-compose.yml
+# MODIFIED to connect to external Caddy proxy network
+# AND keeping direct port mapping
+
+# version: "3.8" # Optional, removed for Compose v2+
+
+services:
+  # --- Broker Service (Redis) ---
+  # No changes needed here
+  broker:
+    image: docker.io/library/redis:7
+    container_name: paperless-broker
+    restart: unless-stopped
+    volumes:
+      - ../../data/paperless-ngx/redisdata:/data
+    networks:
+      - paperless_internal # Stays only on the internal network
+
+  # --- PostgreSQL Service (Standard Image) ---
+  # No changes needed here
+  db:
+    image: docker.io/library/postgres:17
+    container_name: paperless-db
+    restart: unless-stopped
+    volumes:
+      - ../../data/paperless-ngx/pgdata:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: ${PAPERLESS_DBNAME:-paperless}
+      POSTGRES_USER: ${PAPERLESS_DBUSER:-paperless}
+      POSTGRES_PASSWORD: ${PAPERLESS_DBPASS:?err}
+    networks:
+      - paperless_internal # Stays only on the internal network
+
+  # --- Webserver Service (Paperless-NGX - Latest) ---
+  webserver:
+    # Using specific version previously resolved for stability, or keep :latest if preferred
+    image: ghcr.io/paperless-ngx/paperless-ngx:2.15.3
+    container_name: paperless-webserver
+    restart: unless-stopped
+    depends_on:
+      - broker
+      - db
+    ports: # <-- KEEP THIS SECTION ACTIVE
+      - "${PAPERLESS_PORT_HOST:-8000}:8000" # Keep direct port access
+    volumes:
+      # Volume mappings remain the same
+      - ../../data/paperless-ngx/data:/usr/src/paperless/data
+      - ../../data/paperless-ngx/media:/usr/src/paperless/media
+      - ../../data/paperless-ngx/export:/usr/src/paperless/export
+      - ../../data/paperless-ngx/consume:/usr/src/paperless/consume
+    environment:
+      # Environment variables remain the same, ensure PAPERLESS_URL is set correctly in .env
+      PAPERLESS_REDIS: redis://broker:6379
+      PAPERLESS_DBHOST: db
+      PAPERLESS_DBENGINE: ${PAPERLESS_DBENGINE:-postgresql}
+      PAPERLESS_DBNAME: ${PAPERLESS_DBNAME:-paperless}
+      PAPERLESS_DBUSER: ${PAPERLESS_DBUSER:-paperless}
+      PAPERLESS_DBPASS: ${PAPERLESS_DBPASS:?err}
+      PAPERLESS_URL: ${PAPERLESS_URL:?err} # Made URL required as it's needed for proxy
+      PAPERLESS_ADMIN_USER: ${PAPERLESS_ADMIN_USER:-admin}
+      PAPERLESS_ADMIN_PASSWORD: ${PAPERLESS_ADMIN_PASSWORD:?err}
+      PAPERLESS_OCR_LANGUAGE: ${PAPERLESS_OCR_LANGUAGE:-eng}
+      PAPERLESS_SECRET_KEY: ${PAPERLESS_SECRET_KEY:?err}
+      PAPERLESS_TIME_ZONE: ${PAPERLESS_TIME_ZONE:-Etc/UTC}
+      USERMAP_UID: ${USERMAP_UID:-1000}
+      USERMAP_GID: ${USERMAP_GID:-1000}
+    networks: # <-- CHANGE 1: Modified this section
+      - paperless_internal # Keep connection to internal network for DB/Redis
+      - proxy_network      # Add connection to the shared proxy network
+
+# --- Network Definition ---
+# CHANGE 2: Add this network definition block at the end
+networks:
+  paperless_internal: # definition for the internal network
+    driver: bridge
+    name: paperless_internal_network
+  proxy_network: # definition for the external network Caddy uses
+    external: true # Indicating this network is managed outside this compose file

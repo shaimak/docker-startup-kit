@@ -1,0 +1,111 @@
+# ~/apps/compose/authentik/docker-compose.yml
+# Adapted from official example for the ~/apps structure
+
+#version: "3.8"
+
+services:
+  postgresql:
+    image: docker.io/library/postgres:16-alpine
+    container_name: authentik-db
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
+      start_period: 20s
+      interval: 30s
+      retries: 5
+      timeout: 5s
+    volumes:
+      # Map to host data directory
+      - ../../data/authentik/database:/var/lib/postgresql/data
+    environment:
+      # Variables loaded from --env-file flag
+      POSTGRES_PASSWORD: ${PG_PASS:?database password required}
+      POSTGRES_USER: ${PG_USER:-authentik}
+      POSTGRES_DB: ${PG_DB:-authentik}
+    networks:
+      - authentik_internal
+
+  redis:
+    image: docker.io/library/redis:alpine
+    container_name: authentik-redis
+    command: --save 60 1 --loglevel warning
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping | grep PONG"]
+      start_period: 20s
+      interval: 30s
+      retries: 5
+      timeout: 3s
+    volumes:
+      # Map to host data directory
+      - ../../data/authentik/redis:/data
+    networks:
+      - authentik_internal
+
+  server:
+    image: ${AUTHENTIK_IMAGE:-ghcr.io/goauthentik/server}:${AUTHENTIK_TAG:-2025.2.4}
+    container_name: authentik-server
+    restart: unless-stopped
+    command: server
+    environment:
+      # Variables loaded from --env-file flag
+      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY:?secret key required}
+      AUTHENTIK_POSTGRESQL__HOST: postgresql # Use service name
+      AUTHENTIK_REDIS__HOST: redis          # Use service name
+      AUTHENTIK_POSTGRESQL__USER: ${PG_USER:-authentik}
+      AUTHENTIK_POSTGRESQL__NAME: ${PG_DB:-authentik}
+      AUTHENTIK_POSTGRESQL__PASSWORD: ${PG_PASS}
+      # Set other Authentik settings via .env file (e.g., AUTHENTIK_URL, AUTHENTIK_EMAIL)
+    volumes:
+      # Map to host data directories
+      - ../../data/authentik/media:/media
+      - ../../data/authentik/custom-templates:/templates
+    ports:
+      # Exposing ports might be useful for initial troubleshooting before Caddy is fully working
+      # Comment these out if you only want access via Caddy
+      - "${AUTHENTIK_PORT_HTTP:-9000}:9000"
+      - "${AUTHENTIK_PORT_HTTPS:-9443}:9443"
+    depends_on:
+      postgresql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks: # Connect to internal network AND the external proxy network
+      - authentik_internal
+      - proxy_network
+
+  worker:
+    image: ${AUTHENTIK_IMAGE:-ghcr.io/goauthentik/server}:${AUTHENTIK_TAG:-2025.2.4}
+    container_name: authentik-worker
+    restart: unless-stopped
+    command: worker
+    environment:
+      # Variables loaded from --env-file flag
+      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY}
+      AUTHENTIK_POSTGRESQL__HOST: postgresql # Use service name
+      AUTHENTIK_REDIS__HOST: redis          # Use service name
+      AUTHENTIK_POSTGRESQL__USER: ${PG_USER:-authentik}
+      AUTHENTIK_POSTGRESQL__NAME: ${PG_DB:-authentik}
+      AUTHENTIK_POSTGRESQL__PASSWORD: ${PG_PASS}
+    user: root # Keep as per official example for permissions/docker sock
+    volumes:
+      # Docker socket passthrough
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Map to host data directories
+      - ../../data/authentik/media:/media
+      - ../../data/authentik/certs:/certs
+      - ../../data/authentik/custom-templates:/templates
+    depends_on:
+      postgresql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - authentik_internal
+
+networks:
+  authentik_internal: # Internal network for this stack
+    driver: bridge
+    name: authentik_internal_network
+  proxy_network: # External network shared with Caddy
+    external: true # Managed outside this compose file (by Caddy's compose file, usually)
