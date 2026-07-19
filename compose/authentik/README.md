@@ -6,7 +6,7 @@ database.
 
 - **Images:** `ghcr.io/goauthentik/server` (server + worker) + `postgres:16-alpine` + `redis:alpine`
 - **Containers:** `authentik-server`, `authentik-worker`, `authentik-db`, `authentik-redis`
-- **Public host (example):** `sso.example.com` → `authentik-server:9000`
+- **Public host (example):** `mysso.mydomain.com` → `authentik-server:9000`
 - **Networks:** `authentik_internal_network` (db/redis) + `proxy_network` (server)
 
 ---
@@ -20,7 +20,7 @@ cp compose/authentik/.env.example .env_files/authentik.env
 # 2. Fill in secrets:
 #    AUTHENTIK_SECRET_KEY  ->  openssl rand -hex 32
 #    PG_PASS               ->  openssl rand -hex 24
-#    AUTHENTIK_URL         ->  https://sso.example.com  (your public URL — used for redirects)
+#    AUTHENTIK_URL         ->  https://mysso.mydomain.com  (your public URL — used for redirects)
 
 # 3. Start the stack
 docker compose -f compose/authentik/docker-compose.yml \
@@ -32,7 +32,7 @@ docker compose -f compose/authentik/docker-compose.yml \
 Caddyfile:
 
 ```caddy
-sso.example.com {
+mysso.mydomain.com {
     encode zstd gzip
     reverse_proxy authentik-server:9000
 }
@@ -42,7 +42,7 @@ sso.example.com {
 
 ## First run
 
-1. Browse to `https://sso.example.com/if/flow/initial-setup/`.
+1. Browse to `https://mysso.mydomain.com/if/flow/initial-setup/`.
 2. Set the `akadmin` password. This is your break-glass admin — keep it safe.
 3. From here, create Providers + Applications for each app you want to protect.
 
@@ -61,16 +61,16 @@ sso.example.com {
 The standard Authentik endpoints for OIDC apps:
 
 ```
-authorize:  https://sso.example.com/application/o/authorize/
-token:      https://sso.example.com/application/o/token/
-userinfo:   https://sso.example.com/application/o/userinfo/
-jwks:       https://sso.example.com/application/o/<app-slug>/jwks/
-issuer:     https://sso.example.com/application/o/<app-slug>/
+authorize:  https://mysso.mydomain.com/application/o/authorize/
+token:      https://mysso.mydomain.com/application/o/token/
+userinfo:   https://mysso.mydomain.com/application/o/userinfo/
+jwks:       https://mysso.mydomain.com/application/o/<app-slug>/jwks/
+issuer:     https://mysso.mydomain.com/application/o/<app-slug>/
 ```
 
 > Server-to-server calls (like a JWKS fetch from another container) can target
 > `http://authentik-server:9000/...` internally to avoid NAT-hairpin issues,
-> while the browser-facing URLs stay on the public `sso.example.com`.
+> while the browser-facing URLs stay on the public `mysso.mydomain.com`.
 
 ---
 

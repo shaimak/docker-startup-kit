@@ -42,7 +42,7 @@ services:
       - ../../data/outline/storage:/var/lib/outline/data
     environment:
       # --- Core Outline Settings ---
-      URL: ${OUTLINE_URL:?err} # Must be set to external URL (https://wiki.example.com)
+      URL: ${OUTLINE_URL:?err} # Must be set to external URL (https://mywiki.mydomain.com)
       PORT: "3000"            # Internal port Outline listens on
       SECRET_KEY: ${OUTLINE_SECRET_KEY:?err} # Require Outline specific secret
       UTILS_SECRET: ${OUTLINE_UTILS_SECRET:?err} # Require Outline specific utils secret

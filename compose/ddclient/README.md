@@ -23,17 +23,17 @@ hostnames follow via CNAME/ALIAS. So a changing IP only needs the one anchor
 refreshed.
 
 ```
-example.com               A      -> wherever your main site lives (need NOT be this host)
-root.example.com          A      -> <home WAN IP>     ← ddclient updates this
-  sso / wiki / control . example.com   CNAME -> root.example.com
+mydomain.com               A      -> wherever your main site lives (need NOT be this host)
+root.mydomain.com          A      -> <home WAN IP>     ← ddclient updates this
+  sso / wiki / control . mydomain.com   CNAME -> root.mydomain.com
 
 # Optional second domain for an anonymous front-end (see guacamole README):
-fridayrun.example         ALIAS  -> root.fridayrun.example   (apex follows the anchor)
-root.fridayrun.example    A      -> <home WAN IP>     ← ddclient updates this
+myotherdomain.com         ALIAS  -> root.myotherdomain.com   (apex follows the anchor)
+root.myotherdomain.com    A      -> <home WAN IP>     ← ddclient updates this
 ```
 
 Give a neutral front-end domain its **own** anchor rather than a CNAME to
-`root.example.com` — a CNAME would leak the main name in a `dig`. Point its apex
+`root.mydomain.com` — a CNAME would leak the main name in a `dig`. Point its apex
 at its own anchor with a Porkbun **ALIAS**.
 
 ---
@@ -52,8 +52,8 @@ use=web, web=ifconfig.me/ip
 protocol=porkbun
 apikey=pk1_...                        # account-wide (kept in this file)
 secretapikey=sk1_...
-root.example.com                      # anchor for *.example.com
-root.fridayrun.example                # optional second anchor
+root.mydomain.com                      # anchor for *.mydomain.com
+root.myotherdomain.com                # optional second anchor
 ```
 
 `compose/ddclient/docker-compose.yml` just mounts `../../data/ddclient/config:/config`
@@ -77,8 +77,8 @@ docker logs -f ddclient
 ## Gotchas (the things that actually bit us)
 
 1. **ddclient can NOT update a bare apex on Porkbun — it returns `400`.** Every
-   record it manages must be a **subdomain** (`root.example.com` works; a bare
-   `example.com` fails every cycle with `FAILED: [porkbun][example.com]> 400`).
+   record it manages must be a **subdomain** (`root.mydomain.com` works; a bare
+   `mydomain.com` fails every cycle with `FAILED: [porkbun][mydomain.com]> 400`).
    Fix = update a subdomain anchor and point the apex at it with a **Porkbun
    ALIAS** (apex CNAMEs aren't valid DNS; ALIAS is Porkbun's apex-flattening
    equivalent and returns just the A in a lookup, with no name leak).
@@ -114,10 +114,10 @@ docker restart ddclient                                                      # r
 docker logs -f ddclient                                                      # watch update cycles
 
 # Healthy output looks like:
-#   SUCCESS: [porkbun][root.example.com]> skipped: IPv4 address was already set to <ip>
+#   SUCCESS: [porkbun][root.mydomain.com]> skipped: IPv4 address was already set to <ip>
 
 # Is DNS actually in sync?
-dig +short root.example.com @1.1.1.1     # vs:
+dig +short root.mydomain.com @1.1.1.1     # vs:
 curl -s ifconfig.me/ip
 ```
 

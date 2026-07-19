@@ -4,7 +4,7 @@ Apache Guacamole, a clientless remote-desktop gateway (RDP/VNC/SSH in the
 browser), fronted by Authentik SSO. Used here to reach the host's own desktop
 over RDP, but it can target any machine you can route to.
 
-- **Public hosts (example):** `control.example.com` (primary) + `fridayrun.example` (optional anonymous front-end)
+- **Public hosts (example):** `myremote.mydomain.com` (primary) + `myotherdomain.com` (optional anonymous front-end)
 - **Auths via:** Authentik OIDC (SSO-first); the built-in `guacadmin` stays as a local break-glass admin
 - **Reaches:** in this setup, the host's own desktop (GNOME Remote Desktop / RDP) at `host.docker.internal:3389`
 
@@ -23,7 +23,7 @@ Browser ──HTTPS──> Caddy ──> guacamole-app (Tomcat UI + auth)
                                  │  ├── guacamole-db (Postgres: users, connections, history)
                                  │  └── guacd (proxy daemon; speaks RDP/VNC/SSH)
                                  │         └──RDP──> host.docker.internal:3389 (a desktop)
-                                 └── OIDC ──> Authentik (sso.example.com)
+                                 └── OIDC ──> Authentik (mysso.mydomain.com)
 ```
 
 ---
@@ -73,7 +73,7 @@ Settings → Preferences).
 Caddyfile:
 
 ```caddy
-control.example.com {
+myremote.mydomain.com {
     encode zstd gzip
     reverse_proxy guacamole-app:8080
 }
@@ -89,12 +89,12 @@ PG_DB=guacamole
 PG_PASS=<openssl rand -hex 24>
 
 # --- Authentik SSO (OpenID Connect) ---
-OPENID_AUTHORIZATION_ENDPOINT=https://sso.example.com/application/o/authorize/
+OPENID_AUTHORIZATION_ENDPOINT=https://mysso.mydomain.com/application/o/authorize/
 # JWKS is fetched server-side -> internal address avoids NAT hairpin
 OPENID_JWKS_ENDPOINT=http://authentik-server:9000/application/o/guacamole/jwks/
-OPENID_ISSUER=https://sso.example.com/application/o/guacamole/
+OPENID_ISSUER=https://mysso.mydomain.com/application/o/guacamole/
 OPENID_CLIENT_ID=<from Authentik>
-OPENID_REDIRECT_URI=https://control.example.com/
+OPENID_REDIRECT_URI=https://myremote.mydomain.com/
 OPENID_USERNAME_CLAIM_TYPE=preferred_username   # = the Authentik username field
 OPENID_SCOPE=openid email profile
 EXTENSION_PRIORITY=openid          # redirect straight to Authentik (SSO-first)
@@ -137,7 +137,7 @@ p = OAuth2Provider.objects.create(
     signing_key=cert, include_claims_in_id_token=True,
 )
 p.redirect_uris = [
-    RedirectURI(RedirectURIMatchingMode.STRICT, "https://control.example.com/"),
+    RedirectURI(RedirectURIMatchingMode.STRICT, "https://myremote.mydomain.com/"),
 ]
 p.save(); p.property_mappings.set(scopes); p.save()
 Application.objects.create(name="Guacamole", slug="guacamole", provider=p)
@@ -250,7 +250,7 @@ different machine, the RDP-specific ones may not apply, but the SSO/ban ones do.
 
 9. **JWKS over the internal network.** `OPENID_JWKS_ENDPOINT` points at
    `authentik-server:9000` (server-to-server) to avoid NAT-hairpin issues; the
-   browser-facing authorize URL stays the public `sso.example.com`. Token `iss`
+   browser-facing authorize URL stays the public `mysso.mydomain.com`. Token `iss`
    still matches `OPENID_ISSUER` (the public URL).
 
 10. **The Guacamole on-screen menu and dialogs look tiny — that is fine.** They
@@ -265,7 +265,7 @@ You can serve the same app at a second, neutral domain so the URL you share has
 no descriptive name in it. It is front-end only; auth still runs through
 Authentik.
 
-- Add a second Caddy site block (`fridayrun.example → guacamole-app:8080`).
+- Add a second Caddy site block (`myotherdomain.com → guacamole-app:8080`).
 - Set `OPENID_REDIRECT_URI` to the neutral domain and whitelist **both** redirect
   URIs on the Authentik provider. Guacamole has a single redirect URI, so logins
   always land on the neutral domain.

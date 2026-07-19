@@ -18,10 +18,10 @@ one at a time behind a single reverse proxy.
 | Service | What it does | Public host (example) | Behind SSO |
 |---|---|---|---|
 | [caddy](compose/caddy/README.md) | Reverse proxy + automatic HTTPS. Owns the shared network. | (routes all the below) | n/a |
-| [authentik](compose/authentik/README.md) | Identity provider / single sign-on. | `sso.example.com` | is the IdP |
-| [outline](compose/outline/README.md) | Team wiki / knowledge base. | `wiki.example.com` | via OIDC |
-| [guacamole](compose/guacamole/README.md) | Clientless remote desktop (RDP/VNC/SSH in the browser). | `control.example.com` | via OIDC |
-| [paperless-ngx](compose/paperless-ngx/README.md) | Document scanning + OCR archive. | `docs.example.com` | direct login |
+| [authentik](compose/authentik/README.md) | Identity provider / single sign-on. | `mysso.mydomain.com` | is the IdP |
+| [outline](compose/outline/README.md) | Team wiki / knowledge base. | `mywiki.mydomain.com` | via OIDC |
+| [guacamole](compose/guacamole/README.md) | Clientless remote desktop (RDP/VNC/SSH in the browser). | `myremote.mydomain.com` | via OIDC |
+| [paperless-ngx](compose/paperless-ngx/README.md) | Document scanning + OCR archive. | `mydocs.mydomain.com` | direct login |
 | [ddclient](compose/ddclient/README.md) | Dynamic DNS updater (Porkbun). Keeps DNS pointed at your home IP. | n/a | n/a |
 | [vnstat](compose/vnstat/README.md) | Bandwidth accounting for the host WAN interface. | n/a (CLI) | n/a |
 

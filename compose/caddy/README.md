@@ -28,7 +28,7 @@ docker compose -f compose/caddy/docker-compose.yml up -d
 A plain proxied site is three lines:
 
 ```caddy
-wiki.example.com {
+mywiki.mydomain.com {
     encode zstd gzip
     reverse_proxy outline-app:3000
 }

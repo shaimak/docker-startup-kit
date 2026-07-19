@@ -1,7 +1,7 @@
 # compose/guacamole/docker-compose.yml
 # Apache Guacamole — clientless remote desktop gateway (RDP / VNC / SSH in the browser)
 # Local browser:   http://localhost:18080   (only if the optional port below is uncommented)
-# Via Caddy:       https://control.example.com
+# Via Caddy:       https://myremote.mydomain.com
 # Default login:   guacadmin / guacadmin  — CHANGE THIS immediately after first login.
 # Start with: docker compose --env-file ../../.env_files/guacamole.env up -d
 #

@@ -6,7 +6,7 @@ want).
 
 - **Images:** `paperless-ngx/paperless-ngx` + `postgres:17` + `redis:7`
 - **Containers:** `paperless-webserver`, `paperless-db`, `paperless-broker`
-- **Public host (example):** `docs.example.com` → `paperless-webserver:8000`
+- **Public host (example):** `mydocs.mydomain.com` → `paperless-webserver:8000`
 - **Networks:** `paperless_internal_network` (db/redis) + `proxy_network` (web)
 
 This service also keeps a direct host port (`PAPERLESS_PORT_HOST`, default 8000)
@@ -28,7 +28,7 @@ Fill in `.env_files/paperless-ngx.env`:
 - `PAPERLESS_DBPASS` = a strong DB password
 - `USERMAP_UID` / `USERMAP_GID` = your host user's `id -u` / `id -g` (matters for
   file permissions on the consume/media folders)
-- `PAPERLESS_URL` = `https://docs.example.com`
+- `PAPERLESS_URL` = `https://mydocs.mydomain.com`
 
 ```bash
 # 2. Start
@@ -41,7 +41,7 @@ docker compose -f compose/paperless-ngx/docker-compose.yml \
 Caddyfile:
 
 ```caddy
-docs.example.com {
+mydocs.mydomain.com {
     encode zstd gzip
     reverse_proxy paperless-webserver:8000
 }

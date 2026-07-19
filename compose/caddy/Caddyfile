@@ -8,38 +8,38 @@
 
 {
     # ACME account email for Let's Encrypt expiry notices. Use your own.
-    email you@example.com
+    email you@mydomain.com
 }
 
 # --- Authentik (SSO / identity provider) ---
-sso.example.com {
+mysso.mydomain.com {
     encode zstd gzip
     reverse_proxy authentik-server:9000
 }
 
 # --- Outline (wiki) ---
-wiki.example.com {
+mywiki.mydomain.com {
     encode zstd gzip
     reverse_proxy outline-app:3000
 }
 
 # --- Paperless-ngx (document management) ---
-docs.example.com {
+mydocs.mydomain.com {
     encode zstd gzip
     reverse_proxy paperless-webserver:8000
 }
 
 # --- Guacamole (remote desktop in the browser) ---
-control.example.com {
+myremote.mydomain.com {
     encode zstd gzip
     reverse_proxy guacamole-app:8080
 }
 
 # --- Guacamole anonymous front-end (optional) ---
-# Same app as control.example.com, reached via a neutral domain so the URL you
+# Same app as myremote.mydomain.com, reached via a neutral domain so the URL you
 # share has no descriptive name in it. This is front-end only; auth still runs
 # through Authentik. See compose/ddclient/README.md for the DNS anchor.
-fridayrun.example {
+myotherdomain.com {
     encode zstd gzip
     reverse_proxy guacamole-app:8080
 }
@@ -52,7 +52,7 @@ fridayrun.example {
 # Requires a Proxy Provider (mode: forward_single, external host = this URL) +
 # Application in Authentik, attached to the embedded outpost.
 #
-# app.example.com {
+# myapp.mydomain.com {
 #     encode zstd gzip
 #     route {
 #         # Authentik embedded outpost endpoints (login redirect, callback)
