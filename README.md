@@ -120,7 +120,7 @@ Each service README has its own env values, first-run steps, and quirks.
 
 ---
 
-## The one gotcha that will bite you
+## Things to keep in mind
 
 Editing the Caddyfile and running `caddy reload` reports *"config is unchanged"*
 and keeps serving the old config. The Caddyfile is a single-file bind mount, and
