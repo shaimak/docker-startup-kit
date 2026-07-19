@@ -1,4 +1,4 @@
-# ~/apps/compose/paperless-ngx/docker-compose.yml
+# compose/paperless-ngx/docker-compose.yml
 # MODIFIED to connect to external Caddy proxy network
 # AND keeping direct port mapping
 

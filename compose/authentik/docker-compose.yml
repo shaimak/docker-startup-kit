@@ -1,5 +1,5 @@
-# ~/apps/compose/authentik/docker-compose.yml
-# Adapted from official example for the ~/apps structure
+# compose/authentik/docker-compose.yml
+# Adapted from official example for the docker-startup-kit structure
 
 #version: "3.8"
 

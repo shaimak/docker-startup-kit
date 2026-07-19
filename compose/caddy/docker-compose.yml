@@ -1,4 +1,4 @@
-# ~/apps/compose/caddy/docker-compose.yml
+# compose/caddy/docker-compose.yml
 # Defines the Caddy v2 reverse proxy service.
 # This file CREATES and manages the shared proxy_network.
 

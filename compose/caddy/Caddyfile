@@ -1,43 +1,71 @@
-# ~/apps/compose/caddy/Caddyfile
-# Configuration for the Caddy reverse proxy server
+# compose/caddy/Caddyfile
+# Caddy reverse proxy config. One site block per public hostname.
+# Replace the example domains below with your own.
+#
+# After ANY edit to this file you MUST force-recreate Caddy (a plain reload
+# misses single-file bind-mount changes):
+#   docker compose -f compose/caddy/docker-compose.yml up -d --force-recreate caddy
 
-# Global options block (optional but recommended)
 {
-    # Email address for ACME account (Let's Encrypt notifications)
-    email shaimak.reddy@gmail.com # <--- REPLACE THIS
+    # ACME account email for Let's Encrypt expiry notices. Use your own.
+    email you@example.com
 }
 
-# --- Paperless-NGX Site Definition ---
-# This block defines how to handle requests for docs.shaimakreddy.com
-docs.shaimakreddy.com {
-    # Enable modern compression algorithms
+# --- Authentik (SSO / identity provider) ---
+sso.example.com {
     encode zstd gzip
-
-    # Reverse proxy requests to the Paperless webserver container
-    # Caddy will automatically handle HTTPS for docs.shaimakreddy.com
-    # 'paperless-webserver' is the container_name of the target service
-    # Assumes paperless-webserver is also connected to the 'proxy_network'
-    reverse_proxy paperless-webserver:8000
-}
-
-
-# --- Keycloak Site Definition --- given up
-
-# --- Authentik Site Definition ---
-sso.shaimakreddy.com {
-    encode zstd gzip
-    # Reverse proxy requests to the Authentik server container on its HTTP port (9000)
-    # Caddy handles the HTTPS termination.
-    # Assumes authentik-server is connected to the 'proxy_network'
     reverse_proxy authentik-server:9000
 }
 
-# --- Outline Site Definition ---
-wiki.shaimakreddy.com {
+# --- Outline (wiki) ---
+wiki.example.com {
     encode zstd gzip
-    # Proxy requests to the Outline container on its internal port 3000
     reverse_proxy outline-app:3000
 }
 
-# Add other domains below here later
+# --- Paperless-ngx (document management) ---
+docs.example.com {
+    encode zstd gzip
+    reverse_proxy paperless-webserver:8000
+}
 
+# --- Guacamole (remote desktop in the browser) ---
+control.example.com {
+    encode zstd gzip
+    reverse_proxy guacamole-app:8080
+}
+
+# --- Guacamole anonymous front-end (optional) ---
+# Same app as control.example.com, reached via a neutral domain so the URL you
+# share has no descriptive name in it. This is front-end only; auth still runs
+# through Authentik. See compose/ddclient/README.md for the DNS anchor.
+fridayrun.example {
+    encode zstd gzip
+    reverse_proxy guacamole-app:8080
+}
+
+# --- Template: an app protected by Authentik forward-auth ---
+# Copy this block for any upstream you want to sit behind SSO. Caddy asks
+# Authentik whether the request is authenticated before it reaches the app; an
+# unauthenticated request is redirected to the Authentik login page.
+#
+# Requires a Proxy Provider (mode: forward_single, external host = this URL) +
+# Application in Authentik, attached to the embedded outpost.
+#
+# app.example.com {
+#     encode zstd gzip
+#     route {
+#         # Authentik embedded outpost endpoints (login redirect, callback)
+#         reverse_proxy /outpost.goauthentik.io/* authentik-server:9000
+#         # Ask Authentik if the request is authenticated; 401 -> login redirect
+#         forward_auth authentik-server:9000 {
+#             uri /outpost.goauthentik.io/auth/caddy
+#             copy_headers X-Authentik-Username X-Authentik-Groups X-Authentik-Email X-Authentik-Name X-Authentik-Uid X-Authentik-Jwt X-Authentik-Meta-Jwks X-Authentik-Meta-Outpost X-Authentik-Meta-Provider X-Authentik-Meta-App X-Authentik-Meta-Version
+#         }
+#         # Authenticated requests reach the app (WebSocket upgrades pass through)
+#         reverse_proxy my-app:8080
+#     }
+# }
+#
+# NOTE: do NOT add `trust_forward_header` inside forward_auth. It is not a valid
+# Caddy subdirective and will crash the whole Caddyfile (takes every site down).
