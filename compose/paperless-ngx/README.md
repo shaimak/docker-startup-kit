@@ -23,9 +23,9 @@ cp compose/paperless-ngx/.env.example .env_files/paperless-ngx.env
 
 Fill in `.env_files/paperless-ngx.env`:
 
-- `PAPERLESS_SECRET_KEY` = `openssl rand -base64 32`
+- `PAPERLESS_SECRET_KEY` = `openssl rand -hex 32`
 - `PAPERLESS_ADMIN_PASSWORD` = your admin password
-- `PAPERLESS_DBPASS` = a strong DB password
+- `PAPERLESS_DBPASS` = `openssl rand -hex 24` (hex, so the DB password never contains `/` or `+`)
 - `USERMAP_UID` / `USERMAP_GID` = your host user's `id -u` / `id -g` (matters for
   file permissions on the consume/media folders)
 - `PAPERLESS_URL` = `https://mydocs.mydomain.com`

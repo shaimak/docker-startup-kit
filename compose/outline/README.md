@@ -25,7 +25,7 @@ Fill in `.env_files/outline.env`:
 - `OUTLINE_URL` = `https://mywiki.mydomain.com` (exact public URL)
 - `OUTLINE_SECRET_KEY` = `openssl rand -hex 32`
 - `OUTLINE_UTILS_SECRET` = `openssl rand -hex 32`
-- `OUTLINE_DB_PASS` = `openssl rand -base64 16`
+- `OUTLINE_DB_PASS` = `openssl rand -hex 24` (hex, so the DB URL never contains `/` or `+`)
 - OIDC values (`OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`, the three URIs) — see next
   section.
 
