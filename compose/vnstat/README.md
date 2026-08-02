@@ -9,6 +9,13 @@ publicly.
   interface counters from `/proc/net/dev`
 - **Storage:** `data/vnstat` (the database persists across restarts and reboots)
 
+**Before you start**
+
+- **Requires:** nothing in this stack. vnstat runs on `network_mode: host` and
+  never joins `proxy_network`, so it does not need Caddy.
+- **Run every command below from the repo root** (the folder holding `compose/`
+  and `.env_files/`), not from this folder. All paths are relative to it.
+
 ---
 
 ## Setup

@@ -55,6 +55,12 @@ services:
       AUTHENTIK_POSTGRESQL__USER: ${PG_USER:-authentik}
       AUTHENTIK_POSTGRESQL__NAME: ${PG_DB:-authentik}
       AUTHENTIK_POSTGRESQL__PASSWORD: ${PG_PASS}
+      # Optional first-boot shortcut: seeds the akadmin account so you can skip the
+      # interactive /if/flow/initial-setup/ page. Only read on the FIRST boot against
+      # an empty database; ignored on every boot after that. Leave blank to use the
+      # web setup flow instead. See README for the caveats.
+      AUTHENTIK_BOOTSTRAP_PASSWORD: ${AUTHENTIK_BOOTSTRAP_PASSWORD:-}
+      AUTHENTIK_BOOTSTRAP_EMAIL: ${AUTHENTIK_BOOTSTRAP_EMAIL:-}
       # Set other Authentik settings via .env file (e.g., AUTHENTIK_URL, AUTHENTIK_EMAIL)
     volumes:
       # Map to host data directories

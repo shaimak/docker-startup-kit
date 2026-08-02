@@ -9,6 +9,12 @@ database.
 - **Public host (example):** `mysso.mydomain.com` → `authentik-server:9000`
 - **Networks:** `authentik_internal_network` (db/redis) + `proxy_network` (server)
 
+**Before you start**
+
+- **Requires:** [caddy](../caddy/README.md) already up — it owns `proxy_network`.
+- **Run every command below from the repo root** (the folder holding `compose/`
+  and `.env_files/`), not from this folder. All paths are relative to it.
+
 ---
 
 ## Setup
@@ -45,6 +51,28 @@ mysso.mydomain.com {
 1. Browse to `https://mysso.mydomain.com/if/flow/initial-setup/`.
 2. Set the `akadmin` password. This is your break-glass admin — keep it safe.
 3. From here, create Providers + Applications for each app you want to protect.
+
+### Optional: skip the setup page
+
+If you would rather not click through the web form — scripted installs, or you
+just want the admin to exist the moment the container is up — set these in
+`.env_files/authentik.env` **before the first `up -d`**:
+
+```ini
+AUTHENTIK_BOOTSTRAP_PASSWORD=<a strong password you choose>
+AUTHENTIK_BOOTSTRAP_EMAIL=you@mydomain.com
+```
+
+Authentik seeds the `akadmin` account with them and you can log in at
+`https://mysso.mydomain.com/` immediately. Three things to know:
+
+- **First boot only.** They are read once, against an empty database. Setting
+  them later, or changing them after the fact, does nothing — the account
+  already exists. To change the password after that, use the Authentik UI.
+- **Blank them out afterwards.** Once you are logged in, clear both lines. A
+  plaintext admin password sitting in an env file is easy to forget about.
+- **Never commit them.** `.env_files/` is gitignored for this reason. The
+  template in `.env.example` ships commented out and empty.
 
 ---
 

@@ -239,6 +239,15 @@ docker compose -f compose/caddy/docker-compose.yml up -d --force-recreate caddy
 
 ## Conventions
 
+- **Run every command from the repo root** — the folder holding `compose/`,
+  `data/`, and `.env_files/`. Every path in every README is relative to it
+  (`-f compose/<svc>/docker-compose.yml`, `--env-file .env_files/<svc>.env`).
+  Running from inside a service folder fails: the `-f` path won't resolve, and
+  the `../../data/...` bind mounts in the compose files point at the repo root.
+- **Two paths on every start command, and they are different things.** `-f`
+  picks the compose file; `--env-file` supplies the secrets. Omit `--env-file`
+  and the service starts with blank values, or refuses to start where the
+  compose file marks a variable required (`${VAR:?...}`).
 - **Secrets live only in `.env_files/`.** Never in a compose folder, never in
   `data/`, never committed.
 - **`data/` holds live persistent volumes.** Back it up. Do not wipe it.

@@ -14,6 +14,13 @@ behaviour has sharp edges worth documenting.
 > that deviates from the `.env_files/` convention — the linuxserver image reads
 > the keys from the conf file, not env vars.
 
+**Before you start**
+
+- **Requires:** nothing in this stack. ddclient only talks to the Porkbun API,
+  so it can go up at any point, before or after the other services.
+- **Run every command below from the repo root** (the folder holding `compose/`
+  and `.env_files/`), not from this folder. All paths are relative to it.
+
 ---
 
 ## DNS topology — one A record, everything else points at it

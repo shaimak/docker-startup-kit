@@ -9,7 +9,12 @@ has no separate user list.
 - **Storage:** local disk (`data/outline/storage`), no S3 needed
 - **Networks:** `outline_internal_network` (db/redis) + `proxy_network` (app)
 
-Depends on [authentik](../authentik/README.md) being up first.
+**Before you start**
+
+- **Requires:** [caddy](../caddy/README.md) (owns `proxy_network`) and
+  [authentik](../authentik/README.md), both already up.
+- **Run every command below from the repo root** (the folder holding `compose/`
+  and `.env_files/`), not from this folder. All paths are relative to it.
 
 ---
 

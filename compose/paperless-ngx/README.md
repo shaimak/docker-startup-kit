@@ -12,6 +12,13 @@ want).
 This service also keeps a direct host port (`PAPERLESS_PORT_HOST`, default 8000)
 for local access alongside the Caddy route.
 
+**Before you start**
+
+- **Requires:** [caddy](../caddy/README.md) already up — it owns `proxy_network`.
+  Authentik is *not* required; Paperless has its own login.
+- **Run every command below from the repo root** (the folder holding `compose/`
+  and `.env_files/`), not from this folder. All paths are relative to it.
+
 ---
 
 ## Setup

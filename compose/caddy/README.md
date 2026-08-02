@@ -10,8 +10,14 @@ service joins.
 - **Config:** `compose/caddy/Caddyfile` (single-file bind mount — see gotcha)
 - **State/certs:** `data/caddy/data` (persistent — holds ACME account + certs; don't wipe)
 
-Bring Caddy up **first**. Its compose file creates `proxy_network`; every other
-service marks that network `external: true` and joins it.
+**Before you start**
+
+- **Requires:** nothing. Caddy comes up **first** — its compose file creates
+  `proxy_network`, which every other service marks `external: true` and joins.
+  Starting another service before Caddy fails with a missing-network error.
+- **Run every command below from the repo root** (the folder holding `compose/`
+  and `.env_files/`), not from this folder. All paths are relative to it.
+- Caddy needs **no env file**; its config is the `Caddyfile` in this folder.
 
 ---
 

@@ -12,7 +12,12 @@ Three containers: `guacamole-app` (Tomcat UI + auth), `guacamole-guacd` (the
 proxy daemon that speaks RDP/VNC/SSH), `guacamole-db` (Postgres). App is on
 `proxy_network` + `guacamole_internal_network`; the others stay internal.
 
-Depends on [authentik](../authentik/README.md) being up first.
+**Before you start**
+
+- **Requires:** [caddy](../caddy/README.md) (owns `proxy_network`) and
+  [authentik](../authentik/README.md), both already up.
+- **Run every command below from the repo root** (the folder holding `compose/`
+  and `.env_files/`), not from this folder. All paths are relative to it.
 
 ---
 
