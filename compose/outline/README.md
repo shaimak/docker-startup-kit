@@ -60,10 +60,20 @@ mywiki.mydomain.com {
 OIDC_CLIENT_ID=<from Authentik>
 OIDC_CLIENT_SECRET=<from Authentik>
 OIDC_AUTH_URI=https://mysso.mydomain.com/application/o/authorize/
-OIDC_TOKEN_URI=https://mysso.mydomain.com/application/o/token/
-OIDC_USERINFO_URI=https://mysso.mydomain.com/application/o/userinfo/
+OIDC_TOKEN_URI=http://authentik-server:9000/application/o/token/
+OIDC_USERINFO_URI=http://authentik-server:9000/application/o/userinfo/
 OIDC_DISPLAY_NAME=SSO Login
 ```
+
+Note the split between the three URIs:
+
+- `OIDC_AUTH_URI` is the only one the **browser** visits, so it has to be the
+  public HTTPS host.
+- `OIDC_TOKEN_URI` and `OIDC_USERINFO_URI` are **back-channel** calls that
+  `outline-app` makes server-to-server. Those go direct to the Authentik
+  container on `proxy_network`, so the request never leaves the Docker network
+  and never has to hairpin back through your public URL. Plain `http` is fine
+  here — it is container-to-container traffic that Caddy never sees.
 
 4. Recreate `outline-app`. The login page now shows the SSO button.
 
