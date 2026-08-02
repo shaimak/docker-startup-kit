@@ -65,15 +65,28 @@ OIDC_USERINFO_URI=http://authentik-server:9000/application/o/userinfo/
 OIDC_DISPLAY_NAME=SSO Login
 ```
 
-Note the split between the three URIs:
+Note the split between the three URIs, and that only the first one is `https`:
 
 - `OIDC_AUTH_URI` is the only one the **browser** visits, so it has to be the
   public HTTPS host.
 - `OIDC_TOKEN_URI` and `OIDC_USERINFO_URI` are **back-channel** calls that
-  `outline-app` makes server-to-server. Those go direct to the Authentik
-  container on `proxy_network`, so the request never leaves the Docker network
-  and never has to hairpin back through your public URL. Plain `http` is fine
-  here — it is container-to-container traffic that Caddy never sees.
+  `outline-app` makes server-to-server, from inside the container. Those go
+  direct to the Authentik container on `proxy_network`. Plain `http` is fine —
+  it is container-to-container traffic that Caddy never sees.
+
+**Why this matters (real failure):** if the back-channel URIs point at your
+public HTTPS host, the container has to exit your network and come back in by
+public IP. That only works if your router supports **NAT hairpin** (also called
+NAT loopback). Plenty of routers don't. Move the box to such a network and
+Outline login breaks in a very specific way: Authentik accepts your username and
+password, then Outline errors out on the callback, because the token exchange it
+runs behind the scenes can't reach the public URL. Nothing in the browser hints
+at the cause.
+
+Guacamole in this kit survives that same network, because its one server-side
+call (`OPENID_JWKS_ENDPOINT`) is already pointed at `authentik-server:9000` for
+exactly this reason. If you add another SSO app, check every URL it fetches
+**server-side** and give it the internal address.
 
 4. Recreate `outline-app`. The login page now shows the SSO button.
 
