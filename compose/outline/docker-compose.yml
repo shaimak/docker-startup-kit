@@ -31,7 +31,7 @@ services:
       - outline_internal
 
   outline:
-    image: docker.io/outlinewiki/outline:0.83.0 #latest when last checked
+    image: docker.io/outlinewiki/outline:1.9.2 #latest when last checked
     container_name: outline-app
     restart: unless-stopped
     depends_on:

@@ -4,10 +4,15 @@ The identity provider for the stack. Other apps (Outline, Guacamole, anything
 behind forward-auth) federate to it over OIDC. Nothing else needs its own user
 database.
 
-- **Images:** `ghcr.io/goauthentik/server` (server + worker) + `postgres:16-alpine` + `redis:alpine`
-- **Containers:** `authentik-server`, `authentik-worker`, `authentik-db`, `authentik-redis`
+- **Images:** `ghcr.io/goauthentik/server` (server + worker) + `postgres:16-alpine`
+- **Containers:** `authentik-server`, `authentik-worker`, `authentik-db`
 - **Public host (example):** `mysso.mydomain.com` → `authentik-server:9000`
-- **Networks:** `authentik_internal_network` (db/redis) + `proxy_network` (server)
+- **Networks:** `authentik_internal_network` (db) + `proxy_network` (server)
+
+> **No Redis.** Authentik 2025.10 dropped it — caching, background tasks,
+> outpost sessions and websockets all run on PostgreSQL now. Guides that still
+> show a `redis` container and `AUTHENTIK_REDIS__HOST` are pre-2025.10; on
+> current versions both are simply ignored.
 
 **Before you start**
 
@@ -115,5 +120,22 @@ docker exec authentik-server ak shell
 #   docker exec authentik-server ak shell -c "exec(open('/tmp/script.py').read())"
 ```
 
-> Back up `data/authentik/` (Postgres + media + certs) to preserve users,
+> Back up `data/authentik/` (Postgres + file storage + certs) to preserve users,
 > providers, and signing keys across a rebuild.
+
+### Upgrading
+
+Move **one minor train at a time** — 2026.2 → 2026.5, not 2026.2 → 2027.x — and
+never downgrade. Each release runs forward-only schema migrations, so a rollback
+leaves the database ahead of the binary. Bump `AUTHENTIK_TAG`, `up -d`, then
+watch `docker logs -f authentik-worker` until migrations finish before you
+declare it done.
+
+Two things that look like breakage but are not:
+
+- After a version jump, the embedded outpost can serve **404s on forward-auth
+  protected apps** for the first minute while it re-registers. Wait it out
+  before you start editing providers.
+- File storage moved from `/media` to `/data` in 2025.12. If you are coming from
+  an older copy of this file, copy the old `media/` contents into
+  `authentik-data/` rather than leaving the `/media` mount in place.

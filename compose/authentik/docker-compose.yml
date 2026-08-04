@@ -25,25 +25,13 @@ services:
     networks:
       - authentik_internal
 
-  redis:
-    image: docker.io/library/redis:alpine
-    container_name: authentik-redis
-    command: --save 60 1 --loglevel warning
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD-SHELL", "redis-cli ping | grep PONG"]
-      start_period: 20s
-      interval: 30s
-      retries: 5
-      timeout: 3s
-    volumes:
-      # Map to host data directory
-      - ../../data/authentik/redis:/data
-    networks:
-      - authentik_internal
+  # No redis service. Authentik 2025.10 dropped Redis entirely — caching,
+  # background tasks, outpost sessions and websockets all moved to PostgreSQL.
+  # Older guides (and older versions of this file) still show a redis container
+  # plus AUTHENTIK_REDIS__HOST; on current versions both are ignored.
 
   server:
-    image: ${AUTHENTIK_IMAGE:-ghcr.io/goauthentik/server}:${AUTHENTIK_TAG:-2025.2.4}
+    image: ${AUTHENTIK_IMAGE:-ghcr.io/goauthentik/server}:${AUTHENTIK_TAG:-2026.5.6}
     container_name: authentik-server
     restart: unless-stopped
     command: server
@@ -51,7 +39,6 @@ services:
       # Variables loaded from --env-file flag
       AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY:?secret key required}
       AUTHENTIK_POSTGRESQL__HOST: postgresql # Use service name
-      AUTHENTIK_REDIS__HOST: redis          # Use service name
       AUTHENTIK_POSTGRESQL__USER: ${PG_USER:-authentik}
       AUTHENTIK_POSTGRESQL__NAME: ${PG_DB:-authentik}
       AUTHENTIK_POSTGRESQL__PASSWORD: ${PG_PASS}
@@ -63,8 +50,11 @@ services:
       AUTHENTIK_BOOTSTRAP_EMAIL: ${AUTHENTIK_BOOTSTRAP_EMAIL:-}
       # Set other Authentik settings via .env file (e.g., AUTHENTIK_URL, AUTHENTIK_EMAIL)
     volumes:
-      # Map to host data directories
-      - ../../data/authentik/media:/media
+      # Map to host data directories.
+      # 2025.12 moved file storage (icons, backgrounds, uploads) off /media onto
+      # a single /data mount. Mounting /media on a current version silently
+      # gives you an empty file store.
+      - ../../data/authentik/authentik-data:/data
       - ../../data/authentik/custom-templates:/templates
     ports:
       # Exposing ports might be useful for initial troubleshooting before Caddy is fully working
@@ -74,14 +64,12 @@ services:
     depends_on:
       postgresql:
         condition: service_healthy
-      redis:
-        condition: service_healthy
     networks: # Connect to internal network AND the external proxy network
       - authentik_internal
       - proxy_network
 
   worker:
-    image: ${AUTHENTIK_IMAGE:-ghcr.io/goauthentik/server}:${AUTHENTIK_TAG:-2025.2.4}
+    image: ${AUTHENTIK_IMAGE:-ghcr.io/goauthentik/server}:${AUTHENTIK_TAG:-2026.5.6}
     container_name: authentik-worker
     restart: unless-stopped
     command: worker
@@ -89,7 +77,6 @@ services:
       # Variables loaded from --env-file flag
       AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY}
       AUTHENTIK_POSTGRESQL__HOST: postgresql # Use service name
-      AUTHENTIK_REDIS__HOST: redis          # Use service name
       AUTHENTIK_POSTGRESQL__USER: ${PG_USER:-authentik}
       AUTHENTIK_POSTGRESQL__NAME: ${PG_DB:-authentik}
       AUTHENTIK_POSTGRESQL__PASSWORD: ${PG_PASS}
@@ -97,14 +84,12 @@ services:
     volumes:
       # Docker socket passthrough
       - /var/run/docker.sock:/var/run/docker.sock
-      # Map to host data directories
-      - ../../data/authentik/media:/media
+      # Map to host data directories (see the note on /data above)
+      - ../../data/authentik/authentik-data:/data
       - ../../data/authentik/certs:/certs
       - ../../data/authentik/custom-templates:/templates
     depends_on:
       postgresql:
-        condition: service_healthy
-      redis:
         condition: service_healthy
     networks:
       - authentik_internal
