@@ -4,7 +4,7 @@ A self-hosted Docker Compose stack, reverse-proxied by Caddy with automatic
 HTTPS and single sign-on. Use it two ways:
 
 1. **A starter kit** to stand up your own home server: SSO, a wiki, remote
-   desktop in the browser, document management, dynamic DNS, and bandwidth
+   desktop in the browser, a password vault, dynamic DNS, and bandwidth
    accounting.
 2. **A reference layout** to replicate an existing stack onto a new machine.
 
@@ -33,7 +33,7 @@ a willingness to copy-paste commands.
 - **You own the data.** It lives on your disk, not on someone else's server.
 - **It is always within physical reach.** If something breaks you can walk over
   to the machine. If you stop paying a SaaS bill, nobody locks you out.
-- **Privacy.** Your documents, notes, and desktop sessions never leave your
+- **Privacy.** Your passwords, notes, and desktop sessions never leave your
   hardware.
 - **It is a good exercise.** You learn networking, DNS, reverse proxies, TLS,
   containers, and SSO by running the real thing.
@@ -79,7 +79,7 @@ follows. Data stays on hardware you control.
 | [authentik](compose/authentik/README.md) | Identity provider / single sign-on. | `mysso.mydomain.com` | is the IdP |
 | [outline](compose/outline/README.md) | Team wiki / knowledge base. | `mywiki.mydomain.com` | via OIDC |
 | [guacamole](compose/guacamole/README.md) | Clientless remote desktop (RDP/VNC/SSH in the browser). | `myremote.mydomain.com` | via OIDC |
-| [paperless-ngx](compose/paperless-ngx/README.md) | Document scanning + OCR archive. | `mydocs.mydomain.com` | direct login |
+| [vaultwarden](compose/vaultwarden/README.md) | Bitwarden-compatible password vault. | `mypass.mydomain.com` | no — [on purpose](compose/vaultwarden/README.md) |
 | [ddclient](compose/ddclient/README.md) | Dynamic DNS updater (Porkbun). Keeps DNS pointed at your home IP. | n/a | n/a |
 | [vnstat](compose/vnstat/README.md) | Bandwidth accounting for the host WAN interface. | n/a (CLI) | n/a |
 
@@ -184,9 +184,9 @@ steps (env values, first-run, creating your account, wiring SSO).
    service authenticates against it.
 3. **The services you want**: [outline](compose/outline/README.md),
    [guacamole](compose/guacamole/README.md),
-   [paperless-ngx](compose/paperless-ngx/README.md), and so on. For the SSO ones
-   you create an OIDC provider in Authentik (the per-service README shows how),
-   paste the credentials into that service's env file, and start it.
+   [vaultwarden](compose/vaultwarden/README.md), and so on. For the SSO ones you
+   create an OIDC provider in Authentik (the per-service README shows how), paste
+   the credentials into that service's env file, and start it.
 4. **Supporting pieces**: [ddclient](compose/ddclient/README.md) for dynamic
    DNS and [vnstat](compose/vnstat/README.md) for bandwidth, any time.
 
@@ -252,12 +252,19 @@ docker compose -f compose/caddy/docker-compose.yml up -d --force-recreate caddy
   `data/`, never committed.
 - **`data/` holds live persistent volumes.** Back it up. Do not wipe it.
 - **Single sign-on is optional per service.** Outline and Guacamole federate to
-  Authentik over OIDC. Any other app can sit behind Authentik forward-auth using
-  the template block in the [Caddyfile](compose/caddy/Caddyfile).
+  Authentik over OIDC. Most other apps can sit behind Authentik forward-auth
+  using the template block in the [Caddyfile](compose/caddy/Caddyfile).
+- **Forward-auth only suits apps you reach in a browser.** Anything with a native
+  or mobile client that calls an API directly cannot follow the login redirect,
+  so wrapping it breaks those clients while the web UI keeps working — which
+  makes it easy to miss. [vaultwarden](compose/vaultwarden/README.md) is the
+  example in this kit, and is left on its own auth for exactly that reason.
 
 ---
 
 ## Things to keep in mind
+
+### Reloading Caddy does not pick up a Caddyfile edit
 
 Editing the Caddyfile and running `caddy reload` reports *"config is unchanged"*
 and keeps serving the old config. The Caddyfile is a single-file bind mount, and
@@ -269,6 +276,31 @@ docker compose -f compose/caddy/docker-compose.yml up -d --force-recreate caddy
 # verify the container actually sees the change:
 docker exec caddy_reverse_proxy grep <newdomain> /etc/caddy/Caddyfile
 ```
+
+### If you keep `data/` on an extra drive, `nofail` is not optional
+
+Plenty of home servers put the big volumes on a second disk or an external USB
+drive and bind-mount it in. The moment that drive is in `/etc/fstab`, it becomes
+part of boot: systemd waits for it, and a mount that fails takes
+`local-fs.target` down with it. The machine then drops to an **emergency shell**
+instead of finishing boot. No Docker, no Caddy, no SSH — every service is
+offline, and the only way in is a keyboard and monitor physically attached to the
+box. A drive that is unplugged, renamed, slow to spin up, or replaced is enough
+to trigger it.
+
+Add `nofail` and a bounded timeout to every non-root mount:
+
+```fstab
+# /etc/fstab — nofail: boot even if the drive is missing
+#              x-systemd.device-timeout: stop waiting after Ns, do not hang
+UUID=xxxx-xxxx  /mnt/storage  ext4  defaults,nofail,x-systemd.device-timeout=10s  0  2
+```
+
+Test it before you rely on it: `sudo systemctl daemon-reload && sudo mount -a`,
+then reboot **once** with the drive physically disconnected and confirm the host
+still comes up and answers SSH. Containers whose bind mounts are missing will
+fail to start, which is the outcome you want — a couple of dead services beats an
+unreachable machine.
 
 ---
 

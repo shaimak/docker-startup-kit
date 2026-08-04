@@ -23,10 +23,15 @@ mywiki.mydomain.com {
     reverse_proxy outline-app:3000
 }
 
-# --- Paperless-ngx (document management) ---
-mydocs.mydomain.com {
+# --- Vaultwarden (password vault) ---
+# Plain reverse_proxy on purpose. Do NOT wrap this one in the forward-auth
+# template below: the Bitwarden browser extension and mobile apps call /api and
+# /identity directly and cannot follow an interactive OIDC login redirect, so
+# forward-auth leaves you with a working web vault and broken clients.
+# See compose/vaultwarden/README.md.
+mypass.mydomain.com {
     encode zstd gzip
-    reverse_proxy paperless-webserver:8000
+    reverse_proxy vaultwarden-app:80
 }
 
 # --- Guacamole (remote desktop in the browser) ---
