@@ -62,6 +62,129 @@ password per app.
 - Apps that have no login of their own can still sit behind Authentik using
   Caddy forward-auth (template in the [Caddyfile](compose/caddy/Caddyfile)).
 
+## Auth: OIDC vs forward auth
+
+Two very different ways a service in this stack can end up "behind Authentik".
+Which one you pick shapes what happens on every request, what the app knows
+about the user, and what breaks if you get it wrong.
+
+### OIDC (the app speaks OpenID Connect itself)
+
+The app has real auth built in. You register it as an OIDC provider in
+Authentik, paste the client ID and secret into the app's env file, and the app
+grows a "Sign in with Authentik" button. Clicking it redirects the browser to
+`mysso.mydomain.com`, the user logs in there, Authentik redirects back with an
+authorization code, the app trades it for an ID token and access token, and
+from that point on the app owns the session and knows exactly who the user is.
+
+Examples in this repo: [Outline](compose/outline/README.md) and
+[Guacamole](compose/guacamole/README.md) both federate this way.
+
+The important part: the app has a real per-user identity. It can attribute a
+wiki edit to Alice, apply a role only Bob is allowed to hold, and log Alice out
+without touching anyone else. Tokens are scoped and revocable, and there is no
+"just set a header" back door — the app validated the signature on the token
+itself.
+
+### Forward auth (the app has no auth; Caddy asks Authentik on every request)
+
+The app is oblivious. Caddy sits in front and, on every incoming request, calls
+Authentik's embedded outpost at `/outpost.goauthentik.io/auth/caddy` to ask
+"should this request go through?". Authentik answers based on the browser's
+session cookie:
+
+- **No valid session** → outpost returns 401. Caddy translates that into a 302
+  bouncing the browser to `mysso.mydomain.com` to log in. On success the
+  browser lands back on the original URL, now with a valid session, and the
+  next request passes.
+- **Valid session** → outpost returns 200, and Caddy adds a batch of
+  `X-authentik-*` headers (username, email, groups) to the upstream request
+  before proxying it to the app. The app just sees a request that arrived with
+  a name attached and trusts it.
+
+The template block is in the [Caddyfile](compose/caddy/Caddyfile).
+
+### When to pick which
+
+Prefer OIDC when the app supports it. Real identity inside the app, scoped
+tokens, no header trust, cleaner logout. This is the default for anything in
+this stack that offers it.
+
+Use forward auth when the app has no login of its own and is only ever reached
+in a browser. It is the way to bolt an auth wall onto a static site, a
+dashboard with no user model, or a legacy tool with hardcoded credentials you
+would rather nobody see.
+
+### Safety, and the sharp edge on forward auth
+
+OIDC is the safer of the two when you have the choice. Tokens are scoped and
+can be revoked centrally, and the app never trusts a plain HTTP header for
+identity — a spoofed header cannot forge a signed JWT.
+
+Forward auth is fine, but the wall only holds if every request actually goes
+through Caddy. It is easy to accidentally leak a bypass in the compose file:
+
+```yaml
+# leaky: the container port is published on the host, so
+# http://<host-ip>:12345 reaches the app WITHOUT going through Caddy,
+# and therefore without going through Authentik.
+services:
+  myapp:
+    ports:
+      - "12345:3000"
+```
+
+Anyone on the LAN or on a shared Docker network can hit that port directly and
+the auth check never runs. Two clean fixes:
+
+```yaml
+# option A: bind the published port to loopback only. Useful for local curl,
+# still not reachable from the LAN.
+ports:
+  - "127.0.0.1:12345:3000"
+
+# option B (preferred): drop the ports block entirely. Caddy reaches the
+# container by name over proxy_network. Nothing is published on the host.
+# ports: []
+```
+
+The app is still on `proxy_network`, Caddy still routes to it as
+`reverse_proxy myapp:3000`, and there is now no way to reach it without going
+through the auth wall.
+
+### The Vaultwarden trap
+
+Do not put forward auth in front of Vaultwarden, and by extension do not put
+it in front of any service that has non-browser clients — mobile apps, browser
+extensions, desktop clients, webhooks, RSS readers, anything that talks to
+`/api` directly. Those clients cannot follow a 302 to a login page and cannot
+carry a session cookie back. The web UI keeps working, so the outage looks
+fine in a browser while every mobile and extension client silently fails.
+
+[compose/vaultwarden/README.md](compose/vaultwarden/README.md) has the long
+version and the table of which clients break.
+
+### Setting up a new forward-auth app in Authentik
+
+Three steps, in this order. Miss step 3 and the outpost returns errors instead
+of redirecting to the login page.
+
+1. **Proxy Provider.** *Applications → Providers → Create → Proxy Provider*.
+   Set the authorization flow, then choose mode **"Forward auth (single
+   application)"** and set **External host** to the full public URL of the
+   app, e.g. `https://myapp.mydomain.com`. The external host must match
+   exactly, scheme included — a mismatch here is why the login loop breaks.
+2. **Application.** *Applications → Applications → Create*. Give it a name
+   and slug, and set the provider to the one you just made.
+3. **Add to the embedded outpost.** *Applications → Outposts → edit
+   `authentik Embedded Outpost` → add the new application to it*. The
+   embedded outpost is what Caddy actually calls at
+   `/outpost.goauthentik.io/auth/caddy`; if the application is not listed on
+   it, the outpost has no rules for that host and every request fails.
+
+Then add the forward-auth block for the new host to the
+[Caddyfile](compose/caddy/Caddyfile) and force-recreate Caddy.
+
 ## Enterprise-ready
 
 This is the same pattern a company would use. Run it on a powerful machine,
