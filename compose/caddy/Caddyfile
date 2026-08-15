@@ -40,6 +40,16 @@ myremote.mydomain.com {
     reverse_proxy guacamole-app:8080
 }
 
+# --- Hermes Agent (AI assistant dashboard) ---
+# Plain reverse_proxy on purpose: the Hermes dashboard has its own login
+# (Basic Auth, required because it binds 0.0.0.0), so it does not need the
+# Authentik forward-auth wrapper. reverse_proxy passes WebSocket upgrades
+# through automatically. See compose/hermes/README.md.
+myhermes.mydomain.com {
+    encode zstd gzip
+    reverse_proxy hermes-dashboard:9119
+}
+
 # --- Guacamole anonymous front-end (optional) ---
 # Same app as myremote.mydomain.com, reached via a neutral domain so the URL you
 # share has no descriptive name in it. This is front-end only; auth still runs
